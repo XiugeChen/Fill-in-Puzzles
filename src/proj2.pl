@@ -66,16 +66,16 @@ insert_to_row(Row, Word) :-
         Word = Row
     ;
     (   append(Word, [X|_], Row), 
-        nonvar(X) )
+        X == # )
     ;
     (   append(Lst, Word, Row),
         append(_, [X], Lst),
-        nonvar(X) )
+        X == # )
     ;
     (   append(Front, [X|_], Row),
-        nonvar(X),
+        X == #,
         append(Lst, Word, Front),
         append(_, [Y], Lst),
-        nonvar(Y)
+        Y == #
     )
     .
