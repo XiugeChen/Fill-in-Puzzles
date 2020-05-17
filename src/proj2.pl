@@ -1,81 +1,105 @@
-% Author:         Xiuge Chen <xiugec@student.unimelb.edu.au>
-% Created on: 2020.05.15
-% Last Modified on: 2020.05.15
-
-% ensure the program load the correct library for matrix transpose
 :- ensure_loaded(library(clpfd)).
 
 puzzle_solution(Puzzle, WordList) :-
-    sort_by_len_occur(WordList, WordList1),
-    insert(Puzzle, WordList1).
+    gen_var_list(Puzzle, VarLists),
+    unify_list(VarLists, WordList).
 
 % 
-sort_by_len_occur(Lst, SortGpLst) :-
-    sort_by_len(Lst, SortLst),
-    group_pairs_by_key(SortLst, GpLst),
-    remove_key(GpLst, GpLst1), 
-    sort_by_len(GpLst1, SortGpLst0),
-    remove_key(SortGpLst0, SortGpLst1),
-    down_dim(SortGpLst1, SortGpLst).
+gen_var_list(Puzzle, VarLists) :-
+    traverse(Puzzle, Front),
+    transpose(Puzzle, PuzzleT),
+    traverse(PuzzleT, Back),
+    append(Front, Back, VarLists).
 
 % 
-sort_by_len(Lst, SortLst) :-
-    gen_len_key(Lst, LstLen),
-    keysort(LstLen, SortLst).
+traverse([], []).
+traverse([Row|Puzzle], List) :-
+    row_traverse(Row, Front),
+    traverse(Puzzle, Back),
+    append(Front, Back, List).
+
+% 
+row_traverse([], []).
+row_traverse([Elem|Row], List) :-
+    partition([Elem|Row], #, Prefix, Suffix),
+    length(Prefix, N),
+    (   N > 1
+    ->  List = [Prefix|Rest]
+    ;   List = Rest
+    ),
+    row_traverse(Suffix, Rest).
+    
+% 
+partition([], _, [], []).
+partition([X|Xs], Elem, Prefix, Suffix) :-
+    (   X == Elem
+    ->  Suffix = Xs,
+        (   var(Prefix)
+        ->  Prefix = []
+        )
+    ;   Prefix = [X|Rest],
+        partition(Xs, Elem, Rest, Suffix)
+    ).
+
+% 
+filter(_, [], []).
+filter(Goal, [X|Xs], NewList) :-
+    ( call(Goal, X)
+    -> NewList = [X|Rest]
+    ; NewList = Rest
+    ),
+    filter(Goal, Xs, Rest).
+
+% 
+longer_than_one(List) :- 
+    length(List, N),
+    N > 1. 
+
+% 
+unify_list(_, []).
+unify_list([Var|VarList], WordList) :-
+    sort_by_match([Var|VarList], WordList, [SVar|SVarList], Len),
+    length(WordList, N),
+    Len >= N,
+    unify(SVar, WordList),
+    select(SVar, WordList, NewWordList),
+    unify_list(SVarList, NewWordList).
 
 %
-gen_len_key([], []).
-gen_len_key([X|Xs], [Y|Ys]) :-
-    length(X, Len),
-    Y = Len-X,
-    gen_len_key(Xs, Ys).
+unify(Var, [Word|WordList]) :-
+    Var = Word ;
+    unify(Var, WordList).
+
+% 
+sort_by_match(VarLists, WordList, SortVarLists, Len) :-
+    calculate_match(VarLists, WordList, MatchLists, Len),
+    keysort(MatchLists, SortMatchLists),
+    remove_key(SortMatchLists, SortVarLists).
+
+% 
+calculate_match([], _, [], 0).
+calculate_match([V|VarLists], WordLists, [C-M|MatchLists], Len) :-
+    calculate_match(VarLists, WordLists, MatchLists, Len1),
+    count_match(V, WordLists, 0, C-M), 
+    (   C < 99
+    ->  Len is Len1 + 1
+    ;   Len is Len1
+    ).
+
+% 
+count_match(VarList, [], Count, Count1-VarList) :-
+    (   Count == 0
+    ->  Count1 = 99
+    ;   Count1 = Count
+    ).
+count_match(VarList, [Word|WordList], Count, Match) :-
+    (   unifiable(VarList, Word, _)
+    ->  Count1 is Count + 1,
+        count_match(VarList, WordList, Count1, Match)
+    ;   count_match(VarList, WordList, Count, Match)
+    ).
 
 % 
 remove_key([], []).
 remove_key([_-Y|Xs], [Y|Ys]) :-
     remove_key(Xs, Ys).
-
-%
-down_dim([], []).
-down_dim([[]|Xss], Ys) :-
-    down_dim(Xss, Ys).
-down_dim([[X|Xs]|Xss], [X|Ys]) :-
-    down_dim([Xs|Xss], Ys).
-
-% 
-insert(_, []).
-insert(Matrix, [Word|Words]) :-
-    insert_word(Matrix, Word),
-    insert(Matrix, Words).
-
-%
-insert_word(Matrix, Word) :-
-    insert_to_matrix(Matrix, Word) ;
-    (   transpose(Matrix, MatrixT),
-        insert_to_matrix(MatrixT, Word),
-        transpose(MatrixT, Matrix)
-    ).
-
-%
-insert_to_matrix([Row|Matrix], Word) :-
-    insert_to_row(Row, Word) ;
-    insert_to_matrix(Matrix, Word).
-
-% 
-insert_to_row(Row, Word) :-
-        Word = Row
-    ;
-    (   append(Word, [X|_], Row), 
-        X == # )
-    ;
-    (   append(Lst, Word, Row),
-        append(_, [X], Lst),
-        X == # )
-    ;
-    (   append(Front, [X|_], Row),
-        X == #,
-        append(Lst, Word, Front),
-        append(_, [Y], Lst),
-        Y == #
-    )
-    .
