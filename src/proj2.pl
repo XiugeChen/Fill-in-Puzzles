@@ -1,6 +1,6 @@
 % Author:         Xiuge Chen <xiugec@student.unimelb.edu.au>
 % Created on: 2020.05.15
-% Last Modified on: 2020.05.15
+% Last Modified on: 2020.05.18
 %
 % The puzzle consists of a grid of squares, most of which are empty 
 % (represents in prolog as unbounded variables), into which letters or digits 
