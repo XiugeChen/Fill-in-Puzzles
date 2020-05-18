@@ -2,7 +2,32 @@
 % Created on: 2020.05.15
 % Last Modified on: 2020.05.15
 %
+% The puzzle consists of a grid of squares, most of which are empty 
+% (represents in prolog as unbounded variables), into which letters or digits 
+% are to be written, but some of which are filled in solid, and are not to be 
+% written in (represents in prolog as the atom '#').
+% For example, below is a 3*3 puzzle with all corners being solid.
+% Puzzle = [[#, _, #], 
+%           [_, _, _], 
+%           [#, _, #]].
 % 
+% A grounded proper list of words to place in the puzzle is given, ex:
+% WordList = [[h, a, t], [c, a, t]].
+%
+% The program need to solve the puzzles. It will place each word in the word 
+% list exactly once in the puzzle, either left-to-right or top-to-bottom, 
+% filling a maximal sequence of empty squares. Also, every maximal sequence 
+% of non-solid squares that is more than one square long must have one word 
+% written in it.
+%
+% The program will firstly generate a list of slots SlotList (a slot is a 
+% maximal sequences of variables that is more than one square long) from 
+% Puzzle, like:
+%       SlotList = [[A,B,C], [X,B,Z]].
+% then it will try to unify SlotList with the WordList, such that after 
+% unification, WordList is a subset of SlotList, and all the remaining slots
+% in SlotList are grounded. If succeed, corresponding variables in Puzzle 
+% will be bounded with the solution. 
 
 % ensure the program load the correct library for matrix transpose
 :- ensure_loaded(library(clpfd)).
@@ -63,7 +88,7 @@ traverse_row([], []).
 traverse_row([Elem|Row], SlotList) :-
     partition([Elem|Row], #, Slot, RemainRow),
     length(Slot, N),
-    (   N > 1
+    (   N > 1  % only output slots with length greater than 1
     ->  SlotList = [Slot|RemainSlotList]
     ;   SlotList = RemainSlotList
     ),
@@ -107,7 +132,9 @@ unify_slot_list([], NonMatchList, []) :-
     ground(NonMatchList).
 unify_slot_list([S|SlotList], PreNonMatch, WordList) :-
     sort_by_match([S|SlotList], WordList, [Slot|SortSlotList], NewNonMatch),
-    longer_or_equal([Slot|SortSlotList], WordList),
+    % the number of unifibale slots is less than the number of words 
+    % imples no solution is possible
+    longer_or_equal([Slot|SortSlotList], WordList), 
     unify_slot(Slot, WordList),
     select(Slot, WordList, NewWordList),
     append(PreNonMatch, NewNonMatch, NonMatchList),
@@ -162,7 +189,7 @@ sort_by_match(SlotList, WordList, SortSlotList, NonMatchList) :-
 gen_slots_match([], _, [], []).
 gen_slots_match([Slot|SlotList], WordList, MatchList, NonMatchList) :-
     count_slot_match(Slot, WordList, 0, C-M), 
-    (   C == 0
+    (   C == 0  % if the slot is not unifiable, put it in NonMatchList
     ->  MatchList = RestMatchList,
         NonMatchList = [M|RestNonMatchList]
     ;   MatchList = [C-M|RestMatchList],
@@ -180,8 +207,8 @@ gen_slots_match([Slot|SlotList], WordList, MatchList, NonMatchList) :-
 % key is Count plus the number of words that are unifiable with the Slot.
 count_slot_match(Slot, [], Count, Count-Slot).
 count_slot_match(Slot, [Word|WordList], Count, Match) :-
-    (   unifiable(Slot, Word, _) % increment count by one if unifiable
-    ->  Count1 is Count + 1,
+    (   unifiable(Slot, Word, _) 
+    ->  Count1 is Count + 1, % increment count by one if unifiable
         count_slot_match(Slot, WordList, Count1, Match)
     ;   count_slot_match(Slot, WordList, Count, Match)
     ).
