@@ -12,6 +12,8 @@
     
 * The program must try to solve the puzzles. It will place each word in the word list exactly once in the puzzle, either left-to-right or top-to-bottom, filling a maximal sequence of empty squares. Also, every maximal sequence of non-solid squares that is more than one square long must have one word from the word list written in it. Many words cross one another, so many of the letters in a horizontal word will also be a letter in a vertical word.
 
+* The program will firstly generate a list of slots SlotList (a slot is a maximal sequences of variables that is more than one square long) from Puzzle, then try to unify SlotList with the WordList, such that after unification, WordList is a subset of SlotList, and all the remaining slots in SlotList are grounded. If succeed, corresponding variables in Puzzle will be bounded with the solution.
+
 * For detailed description please check out [project specification](docs/specification.pdf)
 
 ## Contribution
